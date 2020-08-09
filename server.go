@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -127,7 +128,7 @@ func main() {
 
 	sigCh := make(chan os.Signal, 1)
 	defer close(sigCh)
-	signal.Notify(sigCh, os.Interrupt)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
 
 	errCh := make(chan error, 1)
