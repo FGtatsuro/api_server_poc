@@ -131,13 +131,13 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	errCh := make(chan error, 1)
-	defer close(errCh)
+	shutdown := make(chan error, 1)
+	defer close(shutdown)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	//ctx, cancel := context.WithTimeout(context.Background(), 10*time.Nanosecond)
+	defer cancel()
 	go func() {
-		defer cancel()
-		errCh <- server.Shutdown(ctx)
+		shutdown <- server.Shutdown(ctx)
 	}()
 
 	select {
@@ -145,9 +145,9 @@ func main() {
 		if err := ctx.Err(); err == context.DeadlineExceeded {
 			log.Fatalf("Error in graceful shutdown: %v\n", err)
 		}
-	case err := <-errCh:
+	case err := <-shutdown:
 		if err != nil {
-			log.Fatalf("Error in connection close: %v\n", err)
+			log.Fatalf("Error in graceful shutdown: %v\n", err)
 		}
 	}
 	fmt.Printf("Successful shutdown\n")
