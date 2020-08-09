@@ -126,10 +126,10 @@ func main() {
 		}
 	}()
 
-	sigCh := make(chan os.Signal, 1)
-	defer close(sigCh)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
+	quit := make(chan os.Signal, 1)
+	defer close(quit)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
 	errCh := make(chan error, 1)
 	defer close(errCh)
