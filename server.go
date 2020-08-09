@@ -122,7 +122,7 @@ func main() {
 
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Printf("Error in server termination: %v\n", err)
+			log.Fatalf("Error in server termination: %v\n", err)
 		}
 	}()
 
@@ -143,14 +143,12 @@ func main() {
 	select {
 	case <-ctx.Done():
 		if err := ctx.Err(); err == context.DeadlineExceeded {
-			log.Printf("Error in graceful shutdown: %v\n", err)
-			os.Exit(1)
+			log.Fatalf("Error in graceful shutdown: %v\n", err)
 		}
 	case err := <-errCh:
 		if err != nil {
-			log.Printf("Error in connection close: %v\n", err)
+			log.Fatalf("Error in connection close: %v\n", err)
 		}
 	}
 	fmt.Printf("Successful shutdown\n")
-	os.Exit(0)
 }
