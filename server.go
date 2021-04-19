@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -110,8 +110,11 @@ func apiBuild() {
 }
 
 func main() {
-	apiBuild()
+	var wg sync.WaitGroup
+	stopCh := make(chan struct{})
 
+	wg.Add(1)
+	apiBuild()
 	server := &http.Server{
 		Addr:         "0.0.0.0:8080",
 		WriteTimeout: 30 * time.Second,
@@ -119,36 +122,30 @@ func main() {
 		IdleTimeout:  30 * time.Second,
 		Handler:      nil,
 	}
-
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("Error in server termination: %v\n", err)
+			log.Fatalf("%v\n", err)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		<-stopCh
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		//ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		if err := server.Shutdown(ctx); err != nil {
+			cancel()
+			log.Fatalf("%v\n", err)
+		} else {
+			fmt.Printf("Successful shutdown\n")
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	defer close(quit)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	shutdown := make(chan error, 1)
-	defer close(shutdown)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	//ctx, cancel := context.WithTimeout(context.Background(), 10*time.Nanosecond)
-	defer cancel()
-	go func() {
-		shutdown <- server.Shutdown(ctx)
-	}()
-
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	select {
 	case <-ctx.Done():
-		if err := ctx.Err(); err == context.DeadlineExceeded {
-			log.Fatalf("Error in graceful shutdown: %v\n", err)
-		}
-	case err := <-shutdown:
-		if err != nil {
-			log.Fatalf("Error in graceful shutdown: %v\n", err)
-		}
+		close(stopCh)
+		wg.Wait()
 	}
-	fmt.Printf("Successful shutdown\n")
 }
