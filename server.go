@@ -134,6 +134,8 @@ func main() {
 		//ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
 		if err := server.Shutdown(ctx); err != nil {
+			// Exitの前にcancel関数を呼ぶ
+			// FYI: https://golang.org/pkg/os/#Exit
 			cancel()
 			log.Fatalf("%v\n", err)
 		} else {
