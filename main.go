@@ -62,7 +62,7 @@ func innerHandler(ctx context.Context) ([]byte, error) {
 }
 
 func apiBuild() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 
 		// Middlewareで上手く処理する例: https://deeeet.com/writing/2016/07/22/context/
 		token := r.Header.Get("authorization")

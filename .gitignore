@@ -14,5 +14,8 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+# Server binary, build with `go build`(without -o option)
+api_server_poc
+
 todo
-server
+tmp

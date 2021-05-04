@@ -1,0 +1,12 @@
+README.md
+
+Dockerfile
+Makefile
+
+# Server binary, build with `go build`(without -o option)
+api_server_poc
+
+spec
+
+todo
+tmp
