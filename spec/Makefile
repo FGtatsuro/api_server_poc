@@ -16,4 +16,4 @@ build:
 
 .PHONY: run
 run: build
-	docker run --rm --network $(NETWORK_NAME) --env API_URL="http://$(API_CONTAINER_NAME):8080" $(SPEC_IMAGE_NAME):latest
+	docker run -t --rm --network $(NETWORK_NAME) --env API_URL="http://$(API_CONTAINER_NAME):8080" $(SPEC_IMAGE_NAME):latest
