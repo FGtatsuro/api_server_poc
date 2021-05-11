@@ -19,6 +19,17 @@ const (
 	tokenContextKey = contextKey("token")
 )
 
+type service interface {
+	init()
+	run()
+}
+
+type apiExampleService struct {
+	server *http.Server
+	wg     *sync.WaitGroup
+	stopCh *chan struct{}
+}
+
 // TODO: どうやってテストする?
 func innerHandler(ctx context.Context) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiBase, nil)
@@ -61,7 +72,7 @@ func innerHandler(ctx context.Context) ([]byte, error) {
 	return nil, nil
 }
 
-func apiBuild() {
+func (srv *apiExampleService) init() {
 	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 
 		// Middlewareで上手く処理する例: https://deeeet.com/writing/2016/07/22/context/
@@ -107,6 +118,40 @@ func apiBuild() {
 			}
 		}
 	})
+
+	srv.server = &http.Server{
+		Addr:         "0.0.0.0:8080",
+		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		IdleTimeout:  30 * time.Second,
+		Handler:      nil,
+	}
+}
+
+func (srv *apiExampleService) run() {
+	go func() {
+		if err := srv.server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatalf("%v\n", err)
+		}
+	}()
+	go func() {
+		defer srv.wg.Done()
+
+		<-*srv.stopCh
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		//ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		if err := srv.server.Shutdown(ctx); err != nil {
+			// Call cancel func before os.Exit.
+			//   FYI: https://golang.org/pkg/os/#Exit
+			cancel()
+			log.Fatalf("%v\n", err)
+		} else {
+			fmt.Printf("Successful shutdown\n")
+		}
+
+	}()
 }
 
 func main() {
@@ -114,34 +159,12 @@ func main() {
 	stopCh := make(chan struct{})
 
 	wg.Add(1)
-	apiBuild()
-	server := &http.Server{
-		Addr:         "0.0.0.0:8080",
-		WriteTimeout: 30 * time.Second,
-		ReadTimeout:  30 * time.Second,
-		IdleTimeout:  30 * time.Second,
-		Handler:      nil,
+	srv := apiExampleService{
+		wg:     &wg,
+		stopCh: &stopCh,
 	}
-	go func() {
-		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("%v\n", err)
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		<-stopCh
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		//ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
-		defer cancel()
-		if err := server.Shutdown(ctx); err != nil {
-			// Exitの前にcancel関数を呼ぶ
-			// FYI: https://golang.org/pkg/os/#Exit
-			cancel()
-			log.Fatalf("%v\n", err)
-		} else {
-			fmt.Printf("Successful shutdown\n")
-		}
-	}()
+	srv.init()
+	srv.run()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
