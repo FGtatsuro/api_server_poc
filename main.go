@@ -143,8 +143,8 @@ func (srv *apiExampleService) run() {
 		//ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
 		if err := srv.server.Shutdown(ctx); err != nil {
-			// Call cancel func before os.Exit.
-			//   FYI: https://golang.org/pkg/os/#Exit
+			// Exitの前にcancel関数を呼ぶ
+			// FYI: https://golang.org/pkg/os/#Exit
 			cancel()
 			log.Fatalf("%v\n", err)
 		} else {
